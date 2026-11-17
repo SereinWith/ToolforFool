@@ -1,0 +1,33 @@
+# Render 部署配置
+# 文档：https://render.com/docs/infrastructure-as-code
+services:
+  - type: web
+    name: toolforfool
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: |
+      set -e
+      echo "==> 构建前端"
+      cd frontend
+      npm install
+      npm run build
+      cd ..
+      echo "==> 安装后端核心依赖"
+      pip install -r backend/requirements.txt
+      echo "==> 尝试安装 OCR 依赖（失败不影响部署）"
+      pip install -r backend/requirements-ocr.txt || echo "OCR 依赖安装失败，OCR 功能将不可用"
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.6"
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: "sqlite:///./data/app.db"
+      - key: AI_API_KEY
+        sync: false
+      - key: OCR_PROVIDER
+        value: "paddle"
+    healthCheckPath: /api/health
+    autoDeploy: true

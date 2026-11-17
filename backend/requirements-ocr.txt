@@ -1,0 +1,7 @@
+# ===== OCR 可选依赖（PaddleOCR）=====
+# 注意：PaddlePaddle 仅支持 Python 3.9-3.13，且体积较大（约 100MB+）。
+# Render 部署时建议作为可选安装：安装失败不影响核心功能，OCR 接口会返回 503 提示。
+# 本地使用 OCR 请确保 Python 版本 <= 3.13，然后执行：
+#   pip install -r requirements-ocr.txt
+paddlepaddle>=3.0.0
+paddleocr>=3.0.0
