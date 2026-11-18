@@ -15,8 +15,8 @@ services:
       cd ..
       echo "==> 安装后端核心依赖"
       pip install -r backend/requirements.txt
-      echo "==> 尝试安装 OCR 依赖（失败不影响部署）"
-      pip install -r backend/requirements-ocr.txt || echo "OCR 依赖安装失败，OCR 功能将不可用"
+      echo "==> 尝试安装 OCR 依赖（PaddleOCR 体积大，失败不影响部署）"
+      pip install -r backend/requirements-ocr.txt || echo "OCR 依赖安装失败，将使用云端 OCR"
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
@@ -25,9 +25,17 @@ services:
         value: "false"
       - key: DATABASE_URL
         value: "sqlite:///./data/app.db"
+      - key: AUTO_SIMPLIFY
+        value: "true"
+      - key: OCR_PROVIDER
+        value: "auto"
       - key: AI_API_KEY
         sync: false
-      - key: OCR_PROVIDER
-        value: "paddle"
+      - key: AI_VISION_MODEL
+        value: "doubao-1.5-vision-lite-250315"
+      - key: BAIDU_OCR_API_KEY
+        sync: false
+      - key: BAIDU_OCR_SECRET_KEY
+        sync: false
     healthCheckPath: /api/health
     autoDeploy: true

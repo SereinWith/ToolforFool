@@ -21,6 +21,8 @@ class PersonEvent(Base):
     # 来源 URL 与标题
     source_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     source_title: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    # 数据来源：auto=自动抽取，manual=人工补录（重建时保留）
+    origin: Mapped[str] = mapped_column(String(16), nullable=False, server_default="auto")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

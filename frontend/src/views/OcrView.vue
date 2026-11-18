@@ -10,7 +10,8 @@
         show-icon
         style="margin-bottom: 16px"
       >
-        上传古籍图片，自动识别文字。需安装 PaddleOCR（pip install paddleocr paddlepaddle）或配置云 OCR。
+        上传古籍图片，自动识别文字。系统按优先级自动选择：视觉大模型 → 百度云 OCR → 本地 PaddleOCR。
+        古籍常用繁体，识别结果可一键转简体。
       </el-alert>
       <el-upload
         drag
@@ -99,16 +100,15 @@ async function handleRecognize() {
     const formData = new FormData()
     formData.append('file', file.value)
     // 不传 Content-Type，让 axios 自动生成带 boundary 的 multipart/form-data
-    // OCR 首次加载模型较慢，单独设置较长超时
-    const resp = await request.post<unknown, { text: string; filename: string }>(
-      '/ai/ocr',
-      formData,
-      { timeout: 120000 }
-    )
+    // 云端 OCR / 视觉大模型响应较慢，单独设置较长超时
+    const resp = await request.post<
+      unknown,
+      { text: string; filename: string; provider: string }
+    >('/ai/ocr', formData, { timeout: 180000 })
     resultText.value = resp.text || '（未识别到文字）'
     originalText.value = resultText.value
     isSimplified.value = false
-    ElMessage.success('识别完成')
+    ElMessage.success(`识别完成（${resp.provider}）`)
   } catch {
     /* 错误已在拦截器中提示 */
   } finally {

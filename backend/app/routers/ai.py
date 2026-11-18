@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.schemas.search import SearchRequest, SearchResultOut
 from app.services.ai import expand_keywords, get_llm_service, summarize_text
@@ -48,15 +49,16 @@ async def ocr_recognize(file: UploadFile = File(...)) -> dict:
     if not ocr.available:
         raise HTTPException(
             status_code=503,
-            detail="OCR 服务不可用。请安装 PaddleOCR（pip install paddleocr paddlepaddle）"
-            "或配置云 OCR 的 API Key。",
+            detail="OCR 服务不可用。请任选其一：配置 AI_API_KEY（视觉大模型）、"
+            "配置 BAIDU_OCR_API_KEY/BAIDU_OCR_SECRET_KEY（百度云 OCR）、"
+            "或安装 PaddleOCR（pip install -r requirements-ocr.txt）。",
         )
     try:
         text = ocr.recognize(image_bytes)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"OCR 识别失败: {exc}") from exc
 
-    return {"filename": file.filename, "text": text}
+    return {"filename": file.filename, "text": text, "provider": ocr.name}
 
 
 @router.post("/summarize")
@@ -77,6 +79,8 @@ def ai_status() -> dict:
     return {
         "llm_provider": llm.__class__.__name__,
         "llm_available": llm.available,
-        "ocr_provider": ocr.__class__.__name__,
+        "ocr_provider": ocr.name,
         "ocr_available": ocr.available,
+        "ocr_configured": settings.ocr_provider,
+        "auto_simplify": settings.auto_simplify,
     }

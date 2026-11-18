@@ -2,10 +2,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.crawler.registry import crawl_and_extract
 from app.database import get_db
 from app.models.source import Source
 from app.schemas.source import SourceCreate, SourceOut
+from app.services.converter import to_simplified
 
 router = APIRouter(prefix="/sources", tags=["sources"])
 
@@ -32,12 +34,23 @@ def crawl_url(payload: SourceCreate, db: Session = Depends(get_db)) -> Source:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=502, detail=f"抓取失败: {exc}") from exc
 
+    title = info["title"] or payload.title
+    summary = info["summary"] or payload.summary
+    content = info["content"] or payload.content
+    site = info["site"] or payload.site
+
+    # 录入时自动繁体转简体（默认开启，可通过 AUTO_SIMPLIFY=false 关闭）
+    if settings.auto_simplify:
+        title = to_simplified(title) if title else title
+        summary = to_simplified(summary) if summary else summary
+        content = to_simplified(content) if content else content
+
     source = Source(
         url=info["url"],
-        title=info["title"] or payload.title,
-        summary=info["summary"] or payload.summary,
-        content=info["content"] or payload.content,
-        site=info["site"] or payload.site,
+        title=title,
+        summary=summary,
+        content=content,
+        site=site,
     )
     db.add(source)
     db.commit()

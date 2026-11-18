@@ -7,7 +7,8 @@
 - **抓取入库**：输入古籍 URL，自动抓取标题、概述、正文并存储（支持古诗文网、识典古籍等站点）
 - **关键词检索**：多关键词检索已入库文献，导出 JSON / CSV / TXT
 - **AI 语义搜索**：基于大模型扩展近义词/别称，扩大检索范围（未配置 API Key 时使用内置同义词典）
-- **OCR 文字识别**：上传古籍图片识别文字（基于 PaddleOCR，本地部署需 Python ≤ 3.13）
+- **OCR 文字识别**：上传古籍图片识别文字，自动选择视觉大模型 / 百度云 OCR / 本地 PaddleOCR
+- **自动繁转简**：录入古籍时自动转为简体存储（可通过 `AUTO_SIMPLIFY=false` 关闭）
 - **繁简转换**：繁体 ↔ 简体互转，集成于 OCR 结果、文献详情、搜索选段及独立工具页
 - **人物时间线**：自动从文献中提取人物与事件，按人物归档展示
 
@@ -17,7 +18,7 @@
 |------|------|
 | 后端 | Python 3.12+ / FastAPI / SQLAlchemy 2.0 / SQLite |
 | 前端 | Vue 3 + TypeScript + Vite + Element Plus + Pinia + Vue Router |
-| OCR | PaddleOCR（可选） |
+| OCR | 视觉大模型 / 百度云 OCR / PaddleOCR（自动优先级） |
 | 繁简转换 | opencc-python-reimplemented |
 | AI | 豆包 / OpenAI 兼容接口 |
 

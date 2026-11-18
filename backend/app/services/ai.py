@@ -169,3 +169,94 @@ def summarize_text(text: str, llm: LLMService | None = None, max_length: int = 2
         except Exception:
             pass
     return text[:max_length].replace("\n", " ")
+
+
+# ===== 人物事件抽取（供时间线使用）=====
+
+_EVENT_PROMPT = """你是古籍信息抽取助手。请从下列古文片段中抽取人物及其事迹。
+
+要求：
+1. 只抽取真实的历史或传说人物，忽略“于是、其一、众人、百姓”等非人名；
+2. 同一人物的别称统一为主名（如 轩辕→黄帝、仲尼→孔子、太史公→司马迁）；
+3. time 填该事迹所属朝代或时期（上古、夏、商、西周、春秋、战国、秦、西汉、东汉、三国、晋、隋、唐、五代、宋、元、明、清），无法判断填空字符串；
+4. event 用原文中最能说明该事迹的句子，过长可精简，不要编造；
+5. 严格输出 JSON 数组，不要任何解释、不要代码块：
+[{"person":"人物名","event":"事迹","time":"朝代"}]
+
+古文片段：
+{text}"""
+
+
+def _chunk_text(text: str, size: int = 1800, max_chunks: int = 6) -> list[str]:
+    """按句子边界把长文切分为若干块，控制调用成本。"""
+    text = text.strip()
+    if len(text) <= size:
+        return [text] if text else []
+
+    chunks: list[str] = []
+    start = 0
+    while start < len(text) and len(chunks) < max_chunks:
+        end = min(start + size, len(text))
+        # 尽量在句末标点处断开
+        if end < len(text):
+            for punct in "。！？；\n":
+                pos = text.rfind(punct, start + size // 2, end)
+                if pos != -1:
+                    end = pos + 1
+                    break
+        chunks.append(text[start:end])
+        start = end
+    return chunks
+
+
+def _parse_event_json(raw: str) -> list[dict]:
+    """从模型回复中提取 JSON 数组，容忍代码块与前后说明文字。"""
+    import json
+
+    raw = raw.strip()
+    left = raw.find("[")
+    right = raw.rfind("]")
+    if left == -1 or right == -1 or right <= left:
+        return []
+    try:
+        data = json.loads(raw[left : right + 1])
+    except json.JSONDecodeError:
+        return []
+
+    events: list[dict] = []
+    for item in data:
+        if not isinstance(item, dict):
+            continue
+        person = str(item.get("person", "")).strip()
+        event = str(item.get("event", "")).strip()
+        time_ref = str(item.get("time", "")).strip()
+        if person and event:
+            events.append({"person": person, "event": event, "time": time_ref})
+    return events
+
+
+def extract_events_with_ai(
+    text: str, llm: LLMService | None = None, max_chunks: int = 6
+) -> list[dict]:
+    """用大模型从正文中抽取人物事件。
+
+    返回 [{"person", "event", "time"}]；未配置 Key 或调用失败返回空列表，
+    由调用方降级为规则抽取。
+    """
+    if not text or not llm or not llm.available:
+        return []
+
+    events: list[dict] = []
+    for chunk in _chunk_text(text, max_chunks=max_chunks):
+        try:
+            resp = llm.chat(
+                [
+                    {"role": "system", "content": "你是严谨的古籍信息抽取助手，只输出 JSON。"},
+                    {"role": "user", "content": _EVENT_PROMPT.format(text=chunk)},
+                ],
+                temperature=0.1,
+            )
+            events.extend(_parse_event_json(resp))
+        except Exception:
+            continue
+    return events

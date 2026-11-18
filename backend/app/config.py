@@ -24,19 +24,28 @@ class Settings(BaseSettings):
     # 可通过 CORS_ORIGINS 环境变量设置逗号分隔的来源列表，如 "http://a.com,http://b.com"
     cors_origins: list[str] = ["*"]
 
+    # 录入古籍时是否自动繁体转简体（默认开启）
+    auto_simplify: bool = True
+
     # ===== AI 服务配置（阶段三）=====
     # 支持的 provider: doubao（豆包/火山引擎）、openai（OpenAI 兼容接口）
     ai_provider: str = "doubao"
     ai_api_key: str = ""
     ai_base_url: str = "https://ark.cn-beijing.volces.com/api/v3"
     ai_model: str = "doubao-lite-4k"
+    # 多模态（视觉）模型，用于 AI 看图识字
+    ai_vision_model: str = "doubao-1.5-vision-lite-250315"
     # 单次请求超时（秒）
     ai_timeout: float = 30.0
 
     # ===== OCR 配置（阶段三）=====
-    # ocr_provider: paddle（本地 PaddleOCR）、cloud（云 API，预留）
-    ocr_provider: str = "paddle"
-    ocr_api_key: str = ""
+    # ocr_provider: auto（按优先级自动选择）、vision（多模态大模型）、baidu（百度云 OCR）、paddle（本地 PaddleOCR）
+    ocr_provider: str = "auto"
+    # 视觉大模型复用 AI_API_KEY / AI_BASE_URL，此处为百度云 OCR 的 AK/SK
+    baidu_ocr_api_key: str = ""
+    baidu_ocr_secret_key: str = ""
+    # 云 OCR 请求超时（秒）
+    ocr_timeout: float = 60.0
 
 
 settings = Settings()

@@ -14,9 +14,14 @@ def build(
     db: Session = Depends(get_db),
 ) -> dict:
     """从已入库文献中构建人物时间线。"""
-    events = build_timeline(db, source_ids)
+    events, method = build_timeline(db, source_ids)
     persons = get_persons(db)
-    return {"event_count": len(events), "person_count": len(persons), "persons": persons}
+    return {
+        "event_count": len(events),
+        "person_count": len(persons),
+        "method": method,
+        "persons": persons,
+    }
 
 
 @router.get("/persons")

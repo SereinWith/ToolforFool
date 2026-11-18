@@ -34,5 +34,22 @@ def init_db() -> None:
     """建表（开发期直接 create_all，后续可替换为 Alembic 迁移）。"""
     # 确保模型被注册
     from app.models import source  # noqa: F401
+    from app.models.person import PersonEvent  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    _migrate_person_events()
+
+
+def _migrate_person_events() -> None:
+    """轻量迁移：为已存在的 person_events 表补充 origin 列。"""
+    if not settings.database_url.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        cols = conn.exec_driver_sql("PRAGMA table_info(person_events)").fetchall()
+        if not cols:
+            return
+        names = {row[1] for row in cols}
+        if "origin" not in names:
+            conn.exec_driver_sql(
+                "ALTER TABLE person_events ADD COLUMN origin VARCHAR(16) NOT NULL DEFAULT 'auto'"
+            )
